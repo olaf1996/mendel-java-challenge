@@ -1,0 +1,39 @@
+# Build
+target/
+build/
+out/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# Compiled
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Maven
+pom.xml.tag
+pom.releaseBackup
+.release
+dependency-reduced-pom.xml
+
+# Spring Boot
+spring-boot-*.log
+
+# Docker
+.docker/
