@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/transactions")
 public class TransactionController {
@@ -23,5 +25,10 @@ public class TransactionController {
             @RequestBody @Valid TransactionRequest request) {
         transactionService.save(transactionId, request);
         return ResponseEntity.ok(StatusResponse.OK);
+    }
+
+    @GetMapping("/types/{type}")
+    public ResponseEntity<List<Long>> getTransactionIdsByType(@PathVariable String type) {
+        return ResponseEntity.ok(transactionService.findIdsByType(type));
     }
 }

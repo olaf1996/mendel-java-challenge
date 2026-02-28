@@ -5,6 +5,8 @@ import com.mendel.transactions.domain.Transaction;
 import com.mendel.transactions.repository.TransactionRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class TransactionService {
 
@@ -26,5 +28,12 @@ public class TransactionService {
                 request.parentId()
         );
         repository.save(transaction);
+    }
+
+    /**
+     * IDs de todas las transacciones del tipo dado.
+     */
+    public List<Long> findIdsByType(String type) {
+        return repository.findIdsByType(type);
     }
 }
