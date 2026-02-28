@@ -10,6 +10,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.hasItems;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -61,6 +63,39 @@ class TransactionControllerIntegrationTest {
                             .content(childBody))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("ok"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /transactions/types/{type}")
+    class GetTransactionsByType {
+
+        @Test
+        @DisplayName("sin transacciones del tipo devuelve 200 y lista vacía")
+        void noTransactionsForType_returns200AndEmptyList() throws Exception {
+            mockMvc.perform(get("/transactions/types/nonexistent"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray())
+                    .andExpect(jsonPath("$.length()").value(0));
+        }
+
+        @Test
+        @DisplayName("con transacciones del tipo devuelve 200 y lista de ids")
+        void withTransactionsForType_returns200AndListOfIds() throws Exception {
+            mockMvc.perform(put("/transactions/20")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"food\"}"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(put("/transactions/21")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 200, \"type\": \"food\"}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(get("/transactions/types/food"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$").value(hasItems(20, 21)));
         }
     }
 }
