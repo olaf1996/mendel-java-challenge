@@ -98,4 +98,40 @@ class TransactionControllerIntegrationTest {
                     .andExpect(jsonPath("$").value(hasItems(20, 21)));
         }
     }
+
+    @Nested
+    @DisplayName("GET /transactions/sum/{id}")
+    class GetTransactionSum {
+
+        @Test
+        @DisplayName("suma transitiva: caso challenge 10->11->12, sum/10=20000 y sum/11=15000")
+        void transitiveSum_returnsSumOfTransactionAndDescendants() throws Exception {
+            mockMvc.perform(put("/transactions/10")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 5000, \"type\": \"cars\"}"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(put("/transactions/11")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 10000, \"type\": \"shopping\", \"parent_id\": 10}"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(put("/transactions/12")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 5000, \"type\": \"shopping\", \"parent_id\": 11}"))
+                    .andExpect(status().isOk());
+
+            mockMvc.perform(get("/transactions/sum/10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.sum").value(20000.0));
+            mockMvc.perform(get("/transactions/sum/11"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.sum").value(15000.0));
+        }
+
+        @Test
+        @DisplayName("id inexistente devuelve 404")
+        void nonExistentId_returns404() throws Exception {
+            mockMvc.perform(get("/transactions/sum/99999"))
+                    .andExpect(status().isNotFound());
+        }
+    }
 }
