@@ -93,6 +93,36 @@ class TransactionControllerIntegrationTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.message").value(containsString("Cycle")));
         }
+
+        @Test
+        @DisplayName("type vacío devuelve 400")
+        void typeBlank_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/60")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400));
+        }
+
+        @Test
+        @DisplayName("amount faltante devuelve 400")
+        void amountMissing_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/61")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"type\": \"valid\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400));
+        }
+
+        @Test
+        @DisplayName("type faltante devuelve 400")
+        void typeMissing_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/62")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400));
+        }
     }
 
     @Nested
@@ -161,6 +191,18 @@ class TransactionControllerIntegrationTest {
         void nonExistentId_returns404() throws Exception {
             mockMvc.perform(get("/transactions/sum/99999"))
                     .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @DisplayName("transacción sin hijos devuelve solo su monto")
+        void transactionWithNoChildren_returnsOwnAmount() throws Exception {
+            mockMvc.perform(put("/transactions/70")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 333.5, \"type\": \"solo\"}"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(get("/transactions/sum/70"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.sum").value(333.5));
         }
     }
 }
