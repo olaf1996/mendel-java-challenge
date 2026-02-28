@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItems;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -63,6 +64,34 @@ class TransactionControllerIntegrationTest {
                             .content(childBody))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("ok"));
+        }
+
+        @Test
+        @DisplayName("parent_id inexistente devuelve 400")
+        void parentIdNotExist_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/40")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"x\", \"parent_id\": 99999}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(containsString("Parent transaction does not exist")));
+        }
+
+        @Test
+        @DisplayName("parent_id que formaría ciclo devuelve 400")
+        void parentIdWouldCreateCycle_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/50")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"a\"}"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(put("/transactions/51")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 200, \"type\": \"a\", \"parent_id\": 50}"))
+                    .andExpect(status().isOk());
+            mockMvc.perform(put("/transactions/50")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"a\", \"parent_id\": 51}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(containsString("Cycle")));
         }
     }
 

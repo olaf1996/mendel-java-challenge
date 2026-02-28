@@ -1,5 +1,6 @@
 package com.mendel.transactions.service;
 
+import com.mendel.transactions.api.exception.BadRequestException;
 import com.mendel.transactions.api.exception.TransactionNotFoundException;
 import com.mendel.transactions.api.dto.TransactionRequest;
 import com.mendel.transactions.domain.Transaction;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class TransactionService {
@@ -20,15 +22,34 @@ public class TransactionService {
 
     /**
      * Crea o actualiza una transacción por id.
+     * Rechaza si parent_id no existe o si se formaría un ciclo.
      */
     public void save(long transactionId, TransactionRequest request) {
+        Long parentId = request.parentId();
+        if (parentId != null) {
+            if (repository.findById(parentId).isEmpty()) {
+                throw new BadRequestException("Parent transaction does not exist: " + parentId);
+            }
+            validateNoCycle(transactionId, parentId);
+        }
         Transaction transaction = new Transaction(
                 transactionId,
                 request.amount(),
                 request.type(),
-                request.parentId()
+                parentId
         );
         repository.save(transaction);
+    }
+
+    private void validateNoCycle(long transactionId, long parentId) {
+        Long current = parentId;
+        while (current != null) {
+            if (current == transactionId) {
+                throw new BadRequestException("Cycle detected: parent_id would create a cycle");
+            }
+            Transaction t = repository.findById(current).orElse(null);
+            current = t != null ? t.parentId() : null;
+        }
     }
 
     /**
@@ -52,12 +73,14 @@ public class TransactionService {
         while (!currentLevel.isEmpty()) {
             List<Long> nextLevel = new ArrayList<>();
             for (Long id : currentLevel) {
-                repository.findById(id).ifPresent(t -> {
+                Optional<Transaction> opt = repository.findById(id);
+                if (opt.isPresent()) {
+                    Transaction t = opt.get();
                     sum += t.amount();
                     nextLevel.addAll(repository.findByParentId(id).stream()
                             .map(Transaction::id)
                             .toList());
-                });
+                }
             }
             currentLevel = nextLevel;
         }
