@@ -1,0 +1,12 @@
+target/
+build/
+.git
+.gitignore
+.idea
+*.iml
+.vscode
+*.log
+.DS_Store
+README.md
+Documentacion/
+*.md
