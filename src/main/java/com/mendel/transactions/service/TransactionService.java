@@ -22,10 +22,21 @@ public class TransactionService {
 
     /**
      * Crea o actualiza una transacción por id.
-     * Rechaza si parent_id no existe o si se formaría un ciclo.
+     * Rechaza si transaction_id o parent_id son negativos, amount es NaN/Infinity,
+     * parent_id no existe o se formaría un ciclo.
      */
     public void save(long transactionId, TransactionRequest request) {
+        if (transactionId < 0) {
+            throw new BadRequestException("transaction_id must be non-negative");
+        }
         Long parentId = request.parentId();
+        if (parentId != null && parentId < 0) {
+            throw new BadRequestException("parent_id must be non-negative");
+        }
+        double amount = request.amount();
+        if (Double.isNaN(amount) || Double.isInfinite(amount)) {
+            throw new BadRequestException("amount must be a finite number");
+        }
         if (parentId != null) {
             if (repository.findById(parentId).isEmpty()) {
                 throw new BadRequestException("Parent transaction does not exist: " + parentId);

@@ -123,6 +123,69 @@ class TransactionControllerIntegrationTest {
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.status").value(400));
         }
+
+        @Test
+        @DisplayName("JSON mal formado devuelve 400")
+        void invalidJson_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/63")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": }"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message").value(containsString("Invalid JSON")));
+        }
+
+        @Test
+        @DisplayName("transaction_id en path no numérico devuelve 400")
+        void transactionIdNotNumeric_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/abc")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"x\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message").value(containsString("must be a valid number")));
+        }
+
+        @Test
+        @DisplayName("transaction_id negativo devuelve 400")
+        void transactionIdNegative_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/-1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"x\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(containsString("non-negative")));
+        }
+
+        @Test
+        @DisplayName("parent_id negativo devuelve 400")
+        void parentIdNegative_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/64")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"x\", \"parent_id\": -1}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(containsString("parent_id")));
+        }
+
+        @Test
+        @DisplayName("amount NaN (JSON no estándar) devuelve 400")
+        void amountNaN_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/65")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": NaN, \"type\": \"x\"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message").value(containsString("Invalid JSON")));
+        }
+
+        @Test
+        @DisplayName("type solo espacios devuelve 400")
+        void typeWhitespaceOnly_returns400() throws Exception {
+            mockMvc.perform(put("/transactions/66")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"amount\": 100, \"type\": \"   \"}"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400));
+        }
     }
 
     @Nested
@@ -203,6 +266,14 @@ class TransactionControllerIntegrationTest {
             mockMvc.perform(get("/transactions/sum/70"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.sum").value(333.5));
+        }
+
+        @Test
+        @DisplayName("transaction_id en path no numérico devuelve 400")
+        void sumIdNotNumeric_returns400() throws Exception {
+            mockMvc.perform(get("/transactions/sum/abc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value(containsString("must be a valid number")));
         }
     }
 }
