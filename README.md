@@ -72,3 +72,71 @@ Algunos ejemplos simples podrian ser:
 11
 Codigo 4: Ejemplos
 Prohibida su difusión, publicación o distribución, directa o indirectamente.
+
+---
+
+## Cómo ejecutar
+
+### Requisitos
+
+- **Java 21** (o superior; el proyecto está configurado con Java 21).
+- **Maven 3.6+** (para ejecutar sin Docker).
+- **Docker** y **Docker Compose** (solo si querés levantar la app en contenedor).
+
+### Con Maven
+
+```bash
+# Compilar y ejecutar tests
+mvn clean test
+
+# Levantar la aplicación (puerto 8080)
+mvn spring-boot:run
+```
+
+La API queda disponible en `http://localhost:8080`. Swagger UI: `http://localhost:8080/swagger-ui/index.html`.
+
+### Con Docker
+
+```bash
+# Construir y levantar el servicio
+docker compose up --build
+
+```
+
+El servicio escucha en el puerto **8080**. Para detener: `docker compose down`.
+
+---
+
+## Decisiones de diseño
+
+- **`parent_id` inexistente:** Si en el body del PUT se envía un `parent_id` que no corresponde a ninguna transacción guardada, la API responde **400 Bad Request** con un mensaje explícito. Así se evitan referencias rotas y datos inconsistentes.
+
+- **Ciclos en `parent_id`:** No se permiten. El grafo de transacciones se modela como un conjunto de árboles: cada transacción tiene como máximo un padre y no puede ser ancestro de sí misma. Al crear o actualizar, se valida que asignar ese `parent_id` no forme un ciclo; si se detecta, se responde **400 Bad Request**.
+
+- **GET `/transactions/sum/{id}` con id inexistente:** Se responde **404 Not Found**. La transacción no existe. Devolver 200 con `sum: 0` podría ocultar errores del cliente (por ejemplo, un id mal escrito).
+
+### Validación de entrada
+
+- **Campos obligatorios:** `amount` y `type` son obligatorios en el body del PUT. Si faltan o son inválidos, se responde **400** con detalle por campo (Bean Validation).
+
+- **`type` no vacío:** El campo `type` no puede ser null, vacío ni solo espacios. En ese caso **400 Bad Request**.
+
+- **`amount` finito:** No se aceptan `NaN` ni infinito para `amount`. Se responde **400** con mensaje claro.
+
+- **IDs no negativos:** Tanto `transaction_id` (en la URL) como `parent_id` (en el body, cuando se envía) deben ser ≥ 0. Valores negativos devuelven **400**.
+
+- **Path numérico:** Los parámetros de path `transaction_id` (PUT y GET sum) deben ser números válidos (long). Si se envía algo no numérico (ej. `/transactions/abc`), se responde **400** con mensaje indicando que debe ser un número válido, en lugar de 500.
+
+- **JSON válido:** Si el body del PUT no es JSON válido o no se puede deserializar, se responde **400 Bad Request** con un mensaje de error de parsing, sin exponer detalles internos innecesarios.
+
+### Respuestas de error
+
+- **Cuerpo unificado:** Todas las respuestas de error 4xx (y en general cualquier error manejado) usan el mismo formato: `{"status": <código>, "error": "<frase HTTP>", "message": "<detalle>"}`. Así los clientes pueden tratar los errores de forma uniforme.
+
+- **Manejo centralizado:** Un único `@RestControllerAdvice` traduce excepciones de negocio y de framework (validación, JSON, tipo de path) a respuestas HTTP coherentes.
+
+### Persistencia y concurrencia
+
+- **Almacenamiento en memoria:** Sin base de datos, tal como indica el enunciado. Los datos se pierden al reiniciar la aplicación.
+
+- **Thread-safety:** El repositorio en memoria usa `ConcurrentHashMap` e índices concurrentes para que las peticiones simultáneas no corrompan datos ni provoquen condiciones de carrera.
